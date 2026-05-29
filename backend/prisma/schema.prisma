@@ -1,13 +1,133 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  MANAGER
+  SALES_REP
+}
+
+model Company {
+  id                String               @id @default(uuid())
+  name              String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  users             User[]
+  products          Product[]
+  salesRecords      SalesRecord[]
+  incentivePrograms IncentiveProgram[]
+  commissionTiers   CommissionRuleTier[]
+  auditLogs         AuditLog[]
+}
+
+model User {
+  id                String        @id @default(uuid())
+  companyId         String
+  role              Role
+  email             String        @unique
+  passwordHash      String
+
+  // APP-LEVEL ENCRYPTION (AES-256) REQUIRED FOR UU PDP COMPLIANCE BEFORE DB INSERT
+  ktp               String?       // National ID
+  bankAccount       String?       // Bank details for commission payout
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  company           Company       @relation(fields: [companyId], references: [id])
+  salesRecords      SalesRecord[]
+  auditLogs         AuditLog[]
+
+  @@index([companyId])
+}
+
+model Product {
+  id                String               @id @default(uuid())
+  companyId         String
+  name              String
+  cogs              Decimal              @db.Decimal(10, 2) // Cost of Goods Sold
+  basePrice         Decimal              @db.Decimal(10, 2)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  company           Company              @relation(fields: [companyId], references: [id])
+  salesRecords      SalesRecord[]
+  commissionTiers   CommissionRuleTier[]
+
+  @@index([companyId])
+}
+
+model SalesRecord {
+  id                String        @id @default(uuid())
+  companyId         String
+  userId            String
+  productId         String
+  quantity          Int
+  totalValue        Decimal       @db.Decimal(15, 2)
+  soldAt            DateTime      @default(now())
+
+  company           Company       @relation(fields: [companyId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+  product           Product       @relation(fields: [productId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+}
+
+model IncentiveProgram {
+  id                String               @id @default(uuid())
+  companyId         String
+  name              String
+  startDate         DateTime
+  endDate           DateTime
+  isActive          Boolean              @default(false)
+  createdAt         DateTime             @default(now())
+
+  company           Company              @relation(fields: [companyId], references: [id])
+  tiers             CommissionRuleTier[]
+
+  @@index([companyId])
+}
+
+model CommissionRuleTier {
+  id                 String           @id @default(uuid())
+  companyId          String
+  incentiveProgramId String
+  productId          String?          // Optional: If null, applies to overall revenue
+  minQuantity        Int              // Lower bound for tier (e.g., 0)
+  maxQuantity        Int?             // Upper bound (e.g., 100). Null means infinite.
+  commissionPercent  Decimal          @db.Decimal(5, 2)
+
+  company            Company          @relation(fields: [companyId], references: [id])
+  incentiveProgram   IncentiveProgram @relation(fields: [incentiveProgramId], references: [id])
+  product            Product?         @relation(fields: [productId], references: [id])
+
+  @@index([companyId])
+  @@index([incentiveProgramId])
+}
+
+model AuditLog {
+  id                String        @id @default(uuid())
+  companyId         String
+  userId            String
+  action            String        // e.g., "VIEW_DECRYPTED_KTP", "CREATE_INCENTIVE"
+  entity            String        // e.g., "User", "IncentiveProgram"
+  entityId          String
+  details           Json?         // Stores previous state vs new state
+  createdAt         DateTime      @default(now())
+
+  company           Company       @relation(fields: [companyId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+}
 }
