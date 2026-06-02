@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -34,6 +33,7 @@ model User {
   role              Role
   email             String        @unique
   passwordHash      String
+  name              String
 
   // APP-LEVEL ENCRYPTION (AES-256) REQUIRED FOR UU PDP COMPLIANCE BEFORE DB INSERT
   ktp               String?       // National ID
@@ -129,5 +129,4 @@ model AuditLog {
 
   @@index([companyId])
   @@index([userId])
-}
 }
