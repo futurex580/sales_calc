@@ -25,6 +25,7 @@ model Company {
   incentivePrograms IncentiveProgram[]
   commissionTiers   CommissionRuleTier[]
   auditLogs         AuditLog[]
+  commissionRecords CommissionRecord[]
 }
 
 model User {
@@ -77,6 +78,7 @@ model SalesRecord {
   company           Company       @relation(fields: [companyId], references: [id])
   user              User          @relation(fields: [userId], references: [id])
   product           Product       @relation(fields: [productId], references: [id])
+  commissionRecord  CommissionRecord?
 
   @@index([companyId])
   @@index([userId])
@@ -109,6 +111,7 @@ model CommissionRuleTier {
   company            Company          @relation(fields: [companyId], references: [id])
   incentiveProgram   IncentiveProgram @relation(fields: [incentiveProgramId], references: [id])
   product            Product?         @relation(fields: [productId], references: [id])
+  commissionRecords  CommissionRecord[]
 
   @@index([companyId])
   @@index([incentiveProgramId])
@@ -129,4 +132,18 @@ model AuditLog {
 
   @@index([companyId])
   @@index([userId])
+}
+model CommissionRecord {
+  id                String             @id @default(uuid())
+  companyId         String
+  salesRecordId     String             @unique // A sale typically has one commission payout
+  tierId            String?            // Optional, in case no tier was matched
+  commissionPercent Decimal
+  commissionEarned  Decimal
+  createdAt         DateTime           @default(now())
+
+  // Relations (Make sure these match your existing model names!)
+  company           Company            @relation(fields: [companyId], references: [id])
+  salesRecord       SalesRecord        @relation(fields: [salesRecordId], references: [id])
+  tier              CommissionRuleTier? @relation(fields: [tierId], references: [id])
 }

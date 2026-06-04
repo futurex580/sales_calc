@@ -30,4 +30,9 @@ export class SalesRecordsController {
   remove(@Param('id') id: string) {
     return this.salesRecordsService.remove(id);
   }
+
+  @Post(':id/calculate')
+  calculateCommission(@Param('id') id: string) {
+    return this.salesRecordsService.calculateCommission(id);
+  }
 }
