@@ -1,14 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { IncentiveProgramsService } from './incentive-programs.service';
 import { Prisma } from '@prisma/client';
+import { CreateIncentiveProgramDto } from './dto/create-incentive-program.dto';
+import { UpdateIncentiveProgramDto } from './dto/update-incentive-program.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('incentive-programs')
 export class IncentiveProgramsController {
   constructor(private readonly incentiveProgramsService: IncentiveProgramsService) {}
 
   @Post()
-  create(@Body() createIncentiveProgramDto: Prisma.IncentiveProgramUncheckedCreateInput) {
+  create(@Body() createIncentiveProgramDto: CreateIncentiveProgramDto) {
     return this.incentiveProgramsService.create(createIncentiveProgramDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('kpi/report')
+  getKpiReport(@Request() req: any) {
+    return this.incentiveProgramsService.getKpiReport(req.user.companyId);
   }
 
   @Get()
@@ -22,7 +31,7 @@ export class IncentiveProgramsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateIncentiveProgramDto: Prisma.IncentiveProgramUncheckedUpdateInput) {
+  update(@Param('id') id: string, @Body() updateIncentiveProgramDto: UpdateIncentiveProgramDto) {
     return this.incentiveProgramsService.update(id, updateIncentiveProgramDto);
   }
 

@@ -13,6 +13,21 @@ enum Role {
   SALES_REP
 }
 
+enum TierBasis {
+  QUANTITY
+  REVENUE
+}
+
+enum RewardType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum CalculationMethod {
+  INCREMENTAL
+  RETROACTIVE
+}
+
 model Company {
   id                String               @id @default(uuid())
   name              String
@@ -61,7 +76,7 @@ model Product {
 
   company           Company              @relation(fields: [companyId], references: [id])
   salesRecords      SalesRecord[]
-  commissionTiers   CommissionRuleTier[]
+  incentivePrograms IncentiveProgram[]   // Many-to-many: Product belongs to many programs
 
   @@index([companyId])
 }
@@ -78,7 +93,7 @@ model SalesRecord {
   company           Company       @relation(fields: [companyId], references: [id])
   user              User          @relation(fields: [userId], references: [id])
   product           Product       @relation(fields: [productId], references: [id])
-  commissionRecord  CommissionRecord?
+  commissionRecords CommissionRecord[] // 1-to-Many: 1 Sale can trigger multiple payouts!
 
   @@index([companyId])
   @@index([userId])
@@ -91,10 +106,12 @@ model IncentiveProgram {
   startDate         DateTime
   endDate           DateTime
   isActive          Boolean              @default(false)
+  calculationMethod CalculationMethod    @default(INCREMENTAL)
   createdAt         DateTime             @default(now())
 
   company           Company              @relation(fields: [companyId], references: [id])
   tiers             CommissionRuleTier[]
+  products          Product[]            // Many-to-many: Program covers many products. If empty = ALL Products
 
   @@index([companyId])
 }
@@ -103,14 +120,14 @@ model CommissionRuleTier {
   id                 String           @id @default(uuid())
   companyId          String
   incentiveProgramId String
-  productId          String?          // Optional: If null, applies to overall revenue
-  minQuantity        Int              // Lower bound for tier (e.g., 0)
-  maxQuantity        Int?             // Upper bound (e.g., 100). Null means infinite.
-  commissionPercent  Decimal          @db.Decimal(5, 2)
+  minTarget          Decimal          @db.Decimal(15, 2) // Replaces minQuantity, can be QTY or $
+  maxTarget          Decimal?         @db.Decimal(15, 2) // Replaces maxQuantity, can be QTY or $
+  tierBasis          TierBasis        @default(QUANTITY) // Count by pieces or revenue?
+  rewardType         RewardType       @default(PERCENTAGE) // Pay in % or fixed $?
+  rewardValue        Decimal          @db.Decimal(15, 2) // E.g., 5 (%) or 50 ($)
 
   company            Company          @relation(fields: [companyId], references: [id])
   incentiveProgram   IncentiveProgram @relation(fields: [incentiveProgramId], references: [id])
-  product            Product?         @relation(fields: [productId], references: [id])
   commissionRecords  CommissionRecord[]
 
   @@index([companyId])
@@ -136,10 +153,11 @@ model AuditLog {
 model CommissionRecord {
   id                String             @id @default(uuid())
   companyId         String
-  salesRecordId     String             @unique // A sale typically has one commission payout
-  tierId            String?            // Optional, in case no tier was matched
-  commissionPercent Decimal
-  commissionEarned  Decimal
+  salesRecordId     String             // Removed @unique so multiple records can point to 1 sale
+  tierId            String?            
+  rewardApplied     Decimal            @db.Decimal(15, 2) // Record what the reward was at the time
+  rewardType        RewardType         @default(PERCENTAGE)
+  commissionEarned  Decimal            @db.Decimal(15, 2) // The final calculated $ amount
   createdAt         DateTime           @default(now())
 
   // Relations (Make sure these match your existing model names!)

@@ -6,35 +6,13 @@ import { Prisma } from '@prisma/client';
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(createProductDto: Prisma.ProductUncheckedCreateInput) {
+  create(createProductDto: Prisma.ProductUncheckedCreateInput, companyId: string) {
     return this.prisma.product.create({
-      data: createProductDto,
+      data: { ...createProductDto, companyId },
     });
   }
 
-  findAll() {
-    return this.prisma.product.findMany({
-      include: { company: true }, // Automatically fetch the company details
-    });
-  }
-
-  findOne(id: string) {
-    return this.prisma.product.findUnique({
-      where: { id },
-      include: { company: true },
-    });
-  }
-
-  update(id: string, updateProductDto: Prisma.ProductUncheckedUpdateInput) {
-    return this.prisma.product.update({
-      where: { id },
-      data: updateProductDto,
-    });
-  }
-
-  remove(id: string) {
-    return this.prisma.product.delete({
-      where: { id },
-    });
+  findAll(companyId: string) {
+    return this.prisma.product.findMany({ where: { companyId } });
   }
 }

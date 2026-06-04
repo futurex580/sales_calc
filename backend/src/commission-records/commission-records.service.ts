@@ -12,6 +12,40 @@ export class CommissionRecordsService {
     });
   }
 
+  async getPayoutReport() {
+    // 1. Fetch all commission records, deeply including the related user via the salesRecord
+    const records = await this.prisma.commissionRecord.findMany({
+      include: {
+        salesRecord: {
+          include: {
+            user: true, // Pull in the user to get their name for the report!
+          },
+        },
+      },
+    });
+
+    // 2. Aggregate the records in-memory by User ID
+    const report = {};
+
+    for (const record of records) {
+      // Safely extract the user details and commission amount
+      const user = (record as any).salesRecord?.user;
+      const userId = user?.id || 'Unknown';
+      const userName = user?.name || 'Unknown Rep';
+      const commissionAmount = Number((record as any).amount) || 0;
+
+      if (!report[userId]) {
+        report[userId] = { userId, name: userName, totalPayout: 0, commissionsCount: 0 };
+      }
+
+      report[userId].totalPayout += commissionAmount;
+      report[userId].commissionsCount += 1;
+    }
+
+    // 3. Return a clean array of the final payout summaries
+    return Object.values(report);
+  }
+
   findAll() {
     return this.prisma.commissionRecord.findMany({
       include: {

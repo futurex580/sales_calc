@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { CommissionRecordsService } from './commission-records.service';
 import { Prisma } from '@prisma/client';
+import { AuthGuard } from '@nestjs/passport';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('commission-records')
 export class CommissionRecordsController {
   constructor(private readonly commissionRecordsService: CommissionRecordsService) {}
@@ -9,6 +11,12 @@ export class CommissionRecordsController {
   @Post()
   create(@Body() createCommissionRecordDto: Prisma.CommissionRecordUncheckedCreateInput) {
     return this.commissionRecordsService.create(createCommissionRecordDto);
+  }
+
+  // NOTE: This MUST be placed above the `@Get(':id')` route!
+  @Get('payout-report')
+  getPayoutReport() {
+    return this.commissionRecordsService.getPayoutReport();
   }
 
   @Get()

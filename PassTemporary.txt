@@ -1,0 +1,12 @@
+1. The Sales Rep (Limited Access) This is the user we just created and tested.
+
+Email: test@example.com
+Password: password123
+Role: SALES_REP
+Access: Can view data and run their own commission calculations, but gets a 403 Forbidden if they try to create/edit rules.
+2. The Company Admin (Full Master Access - Create this next!) I highly suggest making one more quick POST /auth/register request in Thunder Client right now with these details so you have a master key saved in your database for later:
+
+Email: admin@example.com
+Password: password123
+Role: COMPANY_ADMIN
+Access: Can do absolutely everything (Create rules, edit tiers, delete records).

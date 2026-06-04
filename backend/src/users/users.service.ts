@@ -1,41 +1,57 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(createUserDto: Prisma.UserUncheckedCreateInput) {
+  async create(data: any, adminCompanyId: string) {
+    // Cek apakah email sudah terdaftar sebelumnya
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: data.email }
+    });
+    if (existingUser) {
+      throw new ConflictException('This email is already registered in the system.');
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
     return this.prisma.user.create({
-      data: createUserDto,
+      data: {
+        email: data.email,
+        name: data.name,
+        passwordHash: hashedPassword,
+        role: data.role as Role,
+        company: { connect: { id: adminCompanyId } }
+      },
+      select: { id: true, email: true, name: true, role: true, createdAt: true }
     });
   }
 
-  findAll() {
+  findAll(companyId: string) {
     return this.prisma.user.findMany({
-      // Automatically fetch the company details alongside the user
-      include: { company: true },
+      where: { companyId },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'desc' }
     });
   }
 
-  findOne(id: string) {
-    return this.prisma.user.findUnique({
-      where: { id },
-      include: { company: true },
-    });
-  }
-
-  update(id: string, updateUserDto: Prisma.UserUpdateInput) {
+  async updateRole(id: string, role: Role, companyId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user || user.companyId !== companyId) throw new NotFoundException('User not found');
+    
     return this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: { role },
+      select: { id: true, email: true, name: true, role: true }
     });
   }
 
-  remove(id: string) {
-    return this.prisma.user.delete({
-      where: { id },
-    });
+  async remove(id: string, companyId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user || user.companyId !== companyId) throw new NotFoundException('User not found');
+    
+    return this.prisma.user.delete({ where: { id } });
   }
 }

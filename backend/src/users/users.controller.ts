@@ -1,33 +1,33 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { Prisma } from '@prisma/client';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '@prisma/client';
 
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles(Role.COMPANY_ADMIN) // Hanya admin yang boleh masuk ke route ini!
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  create(@Body() createUserDto: Prisma.UserUncheckedCreateInput) {
-    return this.usersService.create(createUserDto);
+  create(@Body() createUserDto: any, @Req() req: any) {
+    return this.usersService.create(createUserDto, req.user.companyId);
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Req() req: any) {
+    return this.usersService.findAll(req.user.companyId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: Prisma.UserUpdateInput) {
-    return this.usersService.update(id, updateUserDto);
+  @Patch(':id/role')
+  updateRole(@Param('id') id: string, @Body('role') role: Role, @Req() req: any) {
+    return this.usersService.updateRole(id, role, req.user.companyId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.usersService.remove(id, req.user.companyId);
   }
 }
