@@ -3,6 +3,8 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request} 
 import { SalesRecordsService } from './sales-records.service';
 import { Prisma } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
+import { CreateSalesRecordDto } from './dto/create-sales-record.dto';
+import { UpdateSalesRecordDto } from './dto/update-sales-record.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('sales-records')
@@ -10,7 +12,7 @@ export class SalesRecordsController {
   constructor(private readonly salesRecordsService: SalesRecordsService) {}
 
   @Post()
-  create(@Body() createSalesRecordDto: Prisma.SalesRecordUncheckedCreateInput, @Request() req: any) {
+  create(@Body() createSalesRecordDto: CreateSalesRecordDto, @Request() req: any) {
     // Securely extract the user and company from the verified token
     const userId = req.user.id;
     const companyId = req.user.companyId;
@@ -32,7 +34,7 @@ export class SalesRecordsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSalesRecordDto: Prisma.SalesRecordUncheckedUpdateInput) {
+  update(@Param('id') id: string, @Body() updateSalesRecordDto: UpdateSalesRecordDto) {
     return this.salesRecordsService.update(id, updateSalesRecordDto);
   }
 

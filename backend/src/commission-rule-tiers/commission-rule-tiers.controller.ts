@@ -4,6 +4,8 @@ import { Prisma, Role } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CreateCommissionRuleTierDto } from './dto/create-commission-rule-tier.dto';
+import { UpdateCommissionRuleTierDto } from './dto/update-commission-rule-tier.dto';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('commission-rule-tiers')
@@ -13,7 +15,7 @@ export class CommissionRuleTiersController {
   // Only Admins can create new rules
   @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
   @Post()
-  create(@Body() createCommissionRuleTierDto: Prisma.CommissionRuleTierUncheckedCreateInput, @Req() req: any) {
+  create(@Body() createCommissionRuleTierDto: CreateCommissionRuleTierDto, @Req() req: any) {
     // Safely extract the user ID, with a fallback for when guards are disabled during dev
     const userId = req.user?.id || 'DEV_MODE_NO_USER';
     const companyId = req.user?.companyId || 'DEV_MODE_NO_COMPANY';
@@ -21,8 +23,8 @@ export class CommissionRuleTiersController {
   }
 
   @Get()
-  findAll() {
-    return this.commissionRuleTiersService.findAll();
+  findAll(@Req() req: any) {
+    return this.commissionRuleTiersService.findAll(req.user.companyId); // Pastikan line ini tersimpan!
   }
 
   @Get(':id')
@@ -33,7 +35,7 @@ export class CommissionRuleTiersController {
   // Only Admins can update rules
   @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCommissionRuleTierDto: Prisma.CommissionRuleTierUncheckedUpdateInput, @Req() req: any) {
+  update(@Param('id') id: string, @Body() updateCommissionRuleTierDto: UpdateCommissionRuleTierDto, @Req() req: any) {
     const userId = req.user?.id || 'DEV_MODE_NO_USER';
     const companyId = req.user?.companyId || 'DEV_MODE_NO_COMPANY';
     return this.commissionRuleTiersService.update(id, updateCommissionRuleTierDto, userId, companyId);

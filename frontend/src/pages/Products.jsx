@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useCurrency } from '../CurrencyContext';
+import Layout from './layout.jsx';
 
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [name, setName] = useState('');
   const [basePrice, setBasePrice] = useState('');
   const [cogs, setCogs] = useState('0');
+  const [search, setSearch] = useState('');
   const [editingProductId, setEditingProductId] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const navigate = useNavigate();
   const { formatCurrency, currency, exchangeRate } = useCurrency();
 
@@ -28,9 +31,9 @@ export default function Products() {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     
-    // Automatically convert back to USD if the user is typing in IDR!
-    const finalPrice = currency === 'IDR' ? parseFloat(basePrice) / exchangeRate : parseFloat(basePrice);
-    const finalCogs = currency === 'IDR' ? parseFloat(cogs) / exchangeRate : parseFloat(cogs);
+    // Automatically convert back to IDR if the user is typing in USD!
+    const finalPrice = currency === 'USD' ? parseFloat(basePrice) * exchangeRate : parseFloat(basePrice);
+    const finalCogs = currency === 'USD' ? parseFloat(cogs) * exchangeRate : parseFloat(cogs);
 
     try {
       const payload = {
@@ -58,8 +61,8 @@ export default function Products() {
   const handleEditProduct = (p) => {
     setEditingProductId(p.id);
     setName(p.name);
-    setBasePrice(currency === 'IDR' ? (parseFloat(p.basePrice) * exchangeRate).toString() : p.basePrice.toString());
-    setCogs(currency === 'IDR' ? (parseFloat(p.cogs) * exchangeRate).toString() : p.cogs.toString());
+    setBasePrice(currency === 'USD' ? (parseFloat(p.basePrice) / exchangeRate).toString() : p.basePrice.toString());
+    setCogs(currency === 'USD' ? (parseFloat(p.cogs) / exchangeRate).toString() : p.cogs.toString());
   };
 
   const handleCancelEdit = () => {
@@ -77,13 +80,37 @@ export default function Products() {
     }
   };
 
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    String(p.id).includes(search)
+  );
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+    setSortConfig({ key, direction });
+  };
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    let aVal = a[sortConfig.key];
+    let bVal = b[sortConfig.key];
+
+    if (sortConfig.key === 'basePrice' || sortConfig.key === 'cogs') {
+      aVal = parseFloat(aVal || 0);
+      bVal = parseFloat(bVal || 0);
+    }
+
+    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Products Management</h2>
-        <button onClick={() => navigate('/dashboard')} style={{ padding: '5px 15px', cursor: 'pointer' }}>Back to Dashboard</button>
-      </div>
-      <hr />
+    <Layout>
+      <div style={{ padding: '32px', fontFamily: 'sans-serif', color: '#1F2937', width: '100%' }}>
+        <h2 style={{ marginTop: 0, fontSize: '28px' }}>Products Management</h2>
+        <hr style={{ borderColor: '#E5E7EB', marginBottom: '24px' }} />
       <div style={{ display: 'flex', gap: '40px', marginTop: '20px' }}>
         <div style={{ flex: 1, maxWidth: '300px' }}>
           <h3>{editingProductId ? 'Edit Product' : 'Add New Product'}</h3>
@@ -102,16 +129,25 @@ export default function Products() {
           </form>
         </div>
         <div style={{ flex: 2 }}>
-          <h3>Existing Products</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3 style={{ margin: 0 }}>Existing Products</h3>
+            <input type="text" placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc' }} />
+          </div>
           <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr><th>ID</th><th>Name</th><th>Price</th><th>COGS</th><th>Actions</th></tr>
+              <tr>
+                <th onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>ID {sortConfig.key === 'id' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}</th>
+                <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Name {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}</th>
+                <th onClick={() => handleSort('basePrice')} style={{ cursor: 'pointer' }}>Price {sortConfig.key === 'basePrice' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}</th>
+                <th onClick={() => handleSort('cogs')} style={{ cursor: 'pointer' }}>COGS {sortConfig.key === 'cogs' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}</th>
+                <th>Actions</th>
+              </tr>
             </thead>
             <tbody>
-              {products.length === 0 ? (
+              {sortedProducts.length === 0 ? (
                 <tr><td colSpan="5">No products found.</td></tr>
               ) : (
-                products.map((p) => (
+                sortedProducts.map((p) => (
                   <tr key={p.id}>
                     <td style={{ fontSize: '0.8em', color: 'gray' }}>{p.id}</td>
                     <td>{p.name}</td>
@@ -130,6 +166,7 @@ export default function Products() {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 }

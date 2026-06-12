@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { CreateSalesRecordDto } from './dto/create-sales-record.dto';
+import { UpdateSalesRecordDto } from './dto/update-sales-record.dto';
 
 @Injectable()
 export class SalesRecordsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createSalesRecordDto: Prisma.SalesRecordUncheckedCreateInput, userId: string, companyId: string) {
+  async create(createSalesRecordDto: CreateSalesRecordDto, userId: string, companyId: string) {
     // 1. Fetch the product to get its true basePrice
     const product = await this.prisma.product.findUnique({
       where: { id: createSalesRecordDto.productId },
@@ -26,6 +28,17 @@ export class SalesRecordsService {
         companyId: companyId, // Enforce the secure companyId from the JWT!
         totalValue: calculatedTotalValue,
       },
+    });
+
+    // LOGGING ACTIVITY
+    await this.prisma.auditLog.create({
+      data: {
+        companyId, userId,
+        action: 'CREATE_SALES_RECORD',
+        entity: 'SalesRecord',
+        entityId: salesRecord.id,
+        details: `Recorded sale of ${salesRecord.quantity}x ${product.name} (Value: ${calculatedTotalValue})`,
+      }
     });
 
     // 3. Run the V2 calculation engine!
@@ -71,7 +84,7 @@ export class SalesRecordsService {
     });
   }
 
-  update(id: string, updateSalesRecordDto: Prisma.SalesRecordUncheckedUpdateInput) {
+  update(id: string, updateSalesRecordDto: UpdateSalesRecordDto) {
     return this.prisma.salesRecord.update({
       where: { id },
       data: updateSalesRecordDto,
@@ -79,6 +92,12 @@ export class SalesRecordsService {
   }
 
   async remove(id: string) {
+    // Get record info before deleting so we can log it properly
+    const record = await this.prisma.salesRecord.findUnique({
+      where: { id },
+      include: { product: true, user: true }
+    });
+
     // 1. Delete associated commission records first to satisfy foreign key constraints.
     // We use deleteMany so it doesn't throw an error if a commission record was never generated.
     await this.prisma.commissionRecord.deleteMany({
@@ -86,9 +105,24 @@ export class SalesRecordsService {
     });
 
     // 2. Now it is safe to delete the parent sales record
-    return this.prisma.salesRecord.delete({
+    const deletedRecord = await this.prisma.salesRecord.delete({
       where: { id },
     });
+
+    if (record) {
+      await this.prisma.auditLog.create({
+        data: {
+          companyId: record.companyId,
+          userId: record.userId, 
+          action: 'DELETE_SALES_RECORD',
+          entity: 'SalesRecord',
+          entityId: id,
+          details: `Deleted sale of ${record.quantity}x ${record.product?.name} originally handled by ${record.user?.name}`
+        }
+      });
+    }
+
+    return deletedRecord;
   }
 
   async calculateCommission(id: string) {

@@ -22,14 +22,16 @@ export class IncentiveProgramsService {
   }
 
   // Di dalam fungsi findAll(), tambahkan include products agar Frontend bisa memunculkan namanya
-  findAll() {
+   findAll(companyId: string) {
     return this.prisma.incentiveProgram.findMany({
+      where: { companyId }, // <--- Filter Proteksi Company
       include: { 
         tiers: true,
-        products: { select: { id: true, name: true } } // <--- TAMBAHKAN INI
-      }
+        products: true
+      },
     });
   }
+
 
   async getKpiReport(companyId: string) {
     const programs = await this.prisma.incentiveProgram.findMany({

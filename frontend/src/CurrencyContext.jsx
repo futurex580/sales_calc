@@ -5,7 +5,7 @@ const CurrencyContext = createContext();
 export const useCurrency = () => useContext(CurrencyContext);
 
 export const CurrencyProvider = ({ children }) => {
-  const [currency, setCurrency] = useState(localStorage.getItem('currency') || 'USD');
+  const [currency, setCurrency] = useState(localStorage.getItem('currency') || 'IDR');
   const [exchangeRate, setExchangeRate] = useState(parseFloat(localStorage.getItem('exchangeRate')) || 16000);
   const [rateSource, setRateSource] = useState(localStorage.getItem('rateSource') || 'manual');
 
@@ -16,9 +16,9 @@ export const CurrencyProvider = ({ children }) => {
     localStorage.setItem('rateSource', rateSource);
   }, [currency, exchangeRate, rateSource]);
 
-  // Fetch real-time exchange rates if "api" is selected
+  // Fetch real-time exchange rates if "api" is selected (useful for USD conversion)
   useEffect(() => {
-    if (currency === 'IDR' && rateSource === 'api') {
+    if (rateSource === 'api') {
       fetch('https://open.er-api.com/v6/latest/USD')
         .then(res => res.json())
         .then(data => {
@@ -34,18 +34,18 @@ export const CurrencyProvider = ({ children }) => {
   const formatCurrency = (value) => {
     const num = parseFloat(value) || 0;
     
-    if (currency === 'IDR') {
-      const converted = num * exchangeRate;
+    if (currency === 'USD') {
+      const converted = num / (exchangeRate || 16000);
+      return new Intl.NumberFormat('en-US', { 
+        style: 'currency', 
+        currency: 'USD' 
+      }).format(converted);
+    } else {
       return new Intl.NumberFormat('id-ID', { 
         style: 'currency', 
         currency: 'IDR',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0 
-      }).format(converted);
-    } else {
-      return new Intl.NumberFormat('en-US', { 
-        style: 'currency', 
-        currency: 'USD' 
       }).format(num);
     }
   };

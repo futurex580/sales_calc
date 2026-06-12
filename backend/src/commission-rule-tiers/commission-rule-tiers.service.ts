@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, TierBasis, RewardType } from '@prisma/client';
+import { CreateCommissionRuleTierDto } from './dto/create-commission-rule-tier.dto';
+import { UpdateCommissionRuleTierDto } from './dto/update-commission-rule-tier.dto';
 
 @Injectable()
 export class CommissionRuleTiersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createCommissionRuleTierDto: Prisma.CommissionRuleTierUncheckedCreateInput, userId: string, companyId: string) {
+  async create(createCommissionRuleTierDto: CreateCommissionRuleTierDto, userId: string, companyId: string) {
     const rule = await this.prisma.commissionRuleTier.create({
       data: {
         ...createCommissionRuleTierDto, // Spread the user-provided data (minQuantity, commissionPercent, etc.)
+        tierBasis: createCommissionRuleTierDto.tierBasis as TierBasis,
+        rewardType: createCommissionRuleTierDto.rewardType as RewardType,
         companyId: companyId,           // FORCE the secure companyId from the JWT token!
       },
     });
@@ -31,9 +35,10 @@ export class CommissionRuleTiersService {
     return rule;
   }
 
-  findAll() {
+    findAll(companyId: string) {
     return this.prisma.commissionRuleTier.findMany({
-      include: { 
+      where: { companyId }, // <--- Filter Proteksi Company
+      include: {
         incentiveProgram: {
           include: {
             products: { select: { id: true, name: true } }
@@ -42,6 +47,7 @@ export class CommissionRuleTiersService {
       },
     });
   }
+
 
   findOne(id: string) {
     return this.prisma.commissionRuleTier.findUnique({
@@ -56,10 +62,14 @@ export class CommissionRuleTiersService {
     });
   }
 
-  async update(id: string, updateCommissionRuleTierDto: Prisma.CommissionRuleTierUncheckedUpdateInput, userId: string, companyId: string) {
+  async update(id: string, updateCommissionRuleTierDto: UpdateCommissionRuleTierDto, userId: string, companyId: string) {
+    const updateData: any = { ...updateCommissionRuleTierDto };
+    if (updateData.tierBasis) updateData.tierBasis = updateData.tierBasis as TierBasis;
+    if (updateData.rewardType) updateData.rewardType = updateData.rewardType as RewardType;
+
     const rule = await this.prisma.commissionRuleTier.update({
       where: { id },
-      data: updateCommissionRuleTierDto,
+      data: updateData,
     });
 
     const auditData: Prisma.AuditLogUncheckedCreateInput = {

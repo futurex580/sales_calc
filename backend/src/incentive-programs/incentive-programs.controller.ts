@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { IncentiveProgramsService } from './incentive-programs.service';
 import { Prisma } from '@prisma/client';
 import { CreateIncentiveProgramDto } from './dto/create-incentive-program.dto';
 import { UpdateIncentiveProgramDto } from './dto/update-incentive-program.dto';
 import { AuthGuard } from '@nestjs/passport';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('incentive-programs')
 export class IncentiveProgramsController {
   constructor(private readonly incentiveProgramsService: IncentiveProgramsService) {}
@@ -14,16 +15,16 @@ export class IncentiveProgramsController {
     return this.incentiveProgramsService.create(createIncentiveProgramDto);
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Get('kpi/report')
-  getKpiReport(@Request() req: any) {
+  getKpiReport(@Req() req: any) {
     return this.incentiveProgramsService.getKpiReport(req.user.companyId);
   }
 
   @Get()
-  findAll() {
-    return this.incentiveProgramsService.findAll();
+  findAll(@Req() req: any) {
+    return this.incentiveProgramsService.findAll(req.user.companyId);
   }
+
 
   @Get(':id')
   findOne(@Param('id') id: string) {

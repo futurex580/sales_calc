@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import Layout from './layout.jsx';
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -8,6 +9,8 @@ export default function Users() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('SALES_REP');
+  const [search, setSearch] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const navigate = useNavigate();
 
   const fetchUsers = async () => {
@@ -53,13 +56,32 @@ export default function Users() {
     }
   };
 
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    u.email.toLowerCase().includes(search.toLowerCase()) ||
+    u.role.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+    setSortConfig({ key, direction });
+  };
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    const aVal = (a[sortConfig.key] || '').toLowerCase();
+    const bVal = (b[sortConfig.key] || '').toLowerCase();
+    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Manage Team Members</h2>
-        <button onClick={() => navigate('/dashboard')} style={{ padding: '5px 15px', cursor: 'pointer' }}>Back to Dashboard</button>
-      </div>
-      <hr />
+    <Layout>
+      <div style={{ padding: '32px', fontFamily: 'sans-serif', color: '#1F2937', width: '100%' }}>
+        <h2 style={{ marginTop: 0, fontSize: '28px' }}>Manage Team Members</h2>
+        <hr style={{ borderColor: '#E5E7EB', marginBottom: '24px' }} />
       <div style={{ display: 'flex', gap: '40px', marginTop: '20px' }}>
         <div style={{ flex: 1, maxWidth: '300px' }}>
           <h3>Invite New Member</h3>
@@ -73,13 +95,24 @@ export default function Users() {
           </form>
         </div>
         <div style={{ flex: 2 }}>
-          <h3>Active Team</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3 style={{ margin: 0 }}>Active Team</h3>
+            <input type="text" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc' }} />
+          </div>
           <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead><tr><th>Name</th><th>Email</th><th>Role (RBAC)</th><th>Actions</th></tr></thead>
-            <tbody>{users.map(u => (<tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td><select value={u.role} onChange={(e) => handleRoleChange(u.id, e.target.value)}><option value="SALES_REP">Sales Rep</option><option value="MANAGER">Manager</option><option value="COMPANY_ADMIN">Company Admin</option></select></td><td><button onClick={() => handleDeleteUser(u.id)} style={{ color: 'white', backgroundColor: '#dc3545', border: 'none', padding: '5px 10px', cursor: 'pointer', borderRadius: '4px' }}>Remove</button></td></tr>))}</tbody>
+            <thead>
+              <tr>
+                <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Name {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}</th>
+                <th onClick={() => handleSort('email')} style={{ cursor: 'pointer' }}>Email {sortConfig.key === 'email' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}</th>
+                <th onClick={() => handleSort('role')} style={{ cursor: 'pointer' }}>Role (RBAC) {sortConfig.key === 'role' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>{sortedUsers.length === 0 ? (<tr><td colSpan="4">No users found.</td></tr>) : sortedUsers.map(u => (<tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td><select value={u.role} onChange={(e) => handleRoleChange(u.id, e.target.value)}><option value="SALES_REP">Sales Rep</option><option value="MANAGER">Manager</option><option value="COMPANY_ADMIN">Company Admin</option></select></td><td><button onClick={() => handleDeleteUser(u.id)} style={{ color: 'white', backgroundColor: '#dc3545', border: 'none', padding: '5px 10px', cursor: 'pointer', borderRadius: '4px' }}>Remove</button></td></tr>))}</tbody>
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 }

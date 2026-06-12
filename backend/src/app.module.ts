@@ -12,10 +12,11 @@ import { CommissionRuleTiersModule } from './commission-rule-tiers/commission-ru
 import { CommissionRecordsModule } from './commission-records/commission-records.module';
 import { AuthModule } from './auth/auth.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 
 
 @Module({
-   imports: [SimulationModule, PrismaModule, CompaniesModule, UsersModule, ProductsModule, SalesRecordsModule, IncentiveProgramsModule, CommissionRuleTiersModule, CommissionRecordsModule, AuthModule, AnalyticsModule],
+   imports: [SimulationModule, PrismaModule, CompaniesModule, UsersModule, ProductsModule, SalesRecordsModule, IncentiveProgramsModule, CommissionRuleTiersModule, CommissionRecordsModule, AuthModule, AnalyticsModule, AuditLogsModule],
   controllers: [AppController],
   providers: [AppService],
 })

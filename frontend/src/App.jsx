@@ -7,6 +7,7 @@ import Sales from './pages/Sales';
 import Rules from './pages/Rules';
 import Users from './pages/Users';
 import ProgramAnalytics from './pages/ProgramAnalytics';
+import AuditLogs from './pages/AuditLogs';
 import { CurrencyProvider } from './CurrencyContext';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/rules" element={<Rules />} />
           <Route path="/users" element={<Users />} />
           <Route path="/analytics" element={<ProgramAnalytics />} />
+          <Route path="/audit-logs" element={<AuditLogs />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
